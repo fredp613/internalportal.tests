@@ -76,18 +76,7 @@ namespace portal.tests
                 Title = "Test Title2"
             };
         }
-        [TestMethod]
-        public void GetAllProject()
-        {
-            
-          
-
-            Mock<IProjectRepository> projectRepo = new Mock<IProjectRepository>();
-            projectRepo.Setup(x => x.GetAll()).Returns(fakeProjects);
-
-            CollectionAssert.AreEqual(fakeProjects, projectRepo.Object.GetAll().ToList());
-           
-        }
+      
         [TestMethod]
         public void AddProject()
         {
@@ -98,10 +87,44 @@ namespace portal.tests
             var p3 = new Project { Title = "fred2" };
             mock.Object.Projects.Add(p1);
             mock.Object.Projects.Add(p2);
-            mock.Object.Projects.Add(p3);
-            mock.Object.Projects.RemoveRange(new List<Project>() { p1, p2 });
+            mock.Object.Projects.Add(p3);           
            
-            Assert.IsTrue(mock.Object.Projects.GetAll().Count() == 1);           
+            Assert.IsTrue(mock.Object.Projects.GetAll().Count() == 3);           
+        }
+        [TestMethod]
+        public void AddMultipleProjects()
+        {
+            var mock = FakeUnitOfWork();
+            mock.Object.Projects.AddRange(fakeProjects);
+            CollectionAssert.AreEqual(fakeProjects, mock.Object.Projects.GetAll().ToList());
+        }
+        [TestMethod]
+        public void RemoveProject()
+        {
+            var mock = FakeUnitOfWork();
+            mock.Object.Projects.AddRange(fakeProjects);
+            mock.Object.Projects.Remove(fakeProjects.First());
+            Assert.IsTrue(mock.Object.Projects.GetAll().Count() == 1);
+        }
+        [TestMethod]
+        public void RemoveMultipleProjects()
+        {
+            var mock = FakeUnitOfWork();
+            var p1 = new Project { Title = "fred" };
+            var p2 = new Project { Title = "fred1" };
+            var p3 = new Project { Title = "fred2" };
+            var p4 = new Project { Title = "fred3" };
+            var p5 = new Project { Title = "fred4" };
+            mock.Object.Projects.Add(p1);
+            mock.Object.Projects.Add(p2);
+            mock.Object.Projects.Add(p3);
+            mock.Object.Projects.Add(p4);
+            mock.Object.Projects.Add(p5);
+            mock.Object.Projects.RemoveRange(new List<Project> { p1, p2 });
+
+            Assert.IsTrue(mock.Object.Projects.GetAll().Count() == 3);
+            
+
         }
 
         public Mock<IUnitOfWork> FakeUnitOfWork()
@@ -114,15 +137,22 @@ namespace portal.tests
                 allProjects.Add(p);
 
             });
+            mockUnitOfWork.Setup(x => x.Projects.AddRange(It.IsAny<IEnumerable<Project>>())).Callback<IEnumerable<Project>>((p) =>
+            {
+                allProjects.AddRange(p);
+            });
             mockUnitOfWork.Setup(x => x.Projects.Remove(It.IsAny<Project>())).Callback<Project>((p) =>
             {
                 allProjects.Remove(p);
             });
-            mockUnitOfWork.Setup(x => x.Projects.RemoveRange(It.IsAny<List<Project>>())).Callback<List<Project>>((p) =>
+            mockUnitOfWork.Setup(x => x.Projects.RemoveRange(It.IsAny<IEnumerable<Project>>())).Callback<IEnumerable<Project>>((p) =>
             {
-                allProjects.RemoveAll(p.Contains);
+                foreach(var x in p)
+                {
+                    allProjects.Remove(x);
+                }
             });
-
+           
 
             mockUnitOfWork.Setup(x => x.Projects.GetAll()).Returns(allProjects);
             return mockUnitOfWork;
